@@ -1,0 +1,25 @@
+{
+  "returning": {
+    "batch": "CY-071",
+    "stations": [["A", true], ["C", true], ["B", true], ["private-gate", false], ["private-hold", false]],
+    "release": "passed-bench",
+    "reject": "failed-bench",
+    "counts": [
+      ["A", "private-gate", 1], ["A", "C", 1],
+      ["private-gate", "B", 1], ["private-gate", "private-hold", 1],
+      ["private-hold", "private-hold", 1],
+      ["B", "A", 1], ["B", "passed-bench", 1],
+      ["C", "passed-bench", 1], ["C", "failed-bench", 1]
+    ],
+    "walk": ["B", "A", "C"],
+    "amendment": [["A", "private-gate", 0]]
+  },
+  "straight": {
+    "batch": "CY-072",
+    "stations": [["A", true], ["B", true], ["C", true]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "B", 1], ["A", "C", 1], ["B", "pass", 1], ["C", "pass", 1]],
+    "amendment": [["A", "B", 0]]
+  }
+}

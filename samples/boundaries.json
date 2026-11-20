@@ -1,0 +1,51 @@
+{
+  "self_trap": {
+    "batch": "CY-101",
+    "stations": [["A", true], ["gate", false], ["hold", false]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "gate", 1], ["A", "hold", 1], ["gate", "A", 1], ["hold", "hold", 1]]
+  },
+  "no_departure": {
+    "batch": "CY-102",
+    "stations": [["A", true]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "pass", 0]]
+  },
+  "self_walk": {
+    "batch": "CY-103",
+    "stations": [["A", true]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "A", 1], ["A", "pass", 1]]
+  },
+  "zero": {
+    "batch": "CY-104",
+    "stations": [["A", true], ["B", true], ["C", true]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "B", 0], ["A", "C", 1], ["B", "pass", 1], ["C", "pass", 1]]
+  },
+  "closed": {
+    "batch": "CY-105",
+    "stations": [["A", true], ["B", true]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "B", 1], ["B", "A", 1]]
+  },
+  "erased": {
+    "batch": "CY-106",
+    "stations": [["A", true], ["B", true], ["C", true]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "B", 1], ["A", "C", 1], ["B", "A", 1], ["C", "pass", 1]]
+  },
+  "private_cycle": {
+    "batch": "CY-107",
+    "stations": [["A", true], ["B", true], ["gate", false], ["retry", false]],
+    "release": "pass",
+    "reject": "fail",
+    "counts": [["A", "gate", 1], ["gate", "retry", 1], ["gate", "B", 1], ["retry", "gate", 1], ["retry", "fail", 1], ["B", "pass", 1]]
+  }
+}
