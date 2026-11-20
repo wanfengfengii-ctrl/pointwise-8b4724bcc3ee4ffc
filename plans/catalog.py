@@ -1,5 +1,8 @@
 """Plan numbering and immutable plan records in the archive database."""
 
+import json
+
+from plans.review_snapshot import REVIEW_PLAN_VERSION, decode_review_plan
 from plans.snapshot import FixedPlan, decode_plan, encode_plan
 
 
@@ -30,6 +33,25 @@ def save_plan(connection, revision_id, stations, rows):
     return plan
 
 
+def save_review_plan(connection, revision_id, stations, rows):
+    from plans.review_snapshot import encode_review_plan
+
+    payload = encode_review_plan(stations, rows)
+    connection.execute('BEGIN IMMEDIATE')
+    try:
+        cursor = connection.execute(
+            'INSERT INTO fixed_plans(revision_id, payload) VALUES (?, ?)',
+            (revision_id, payload),
+        )
+        from plans.review_snapshot import ReviewPlan
+        plan = ReviewPlan(cursor.lastrowid, revision_id, stations, rows)
+        connection.commit()
+    except BaseException:
+        connection.rollback()
+        raise
+    return plan
+
+
 def load_plan(connection, plan_id):
     if type(plan_id) is not int or not 0 < plan_id < 2**63:
         raise PlanNotFound(plan_id)
@@ -39,4 +61,7 @@ def load_plan(connection, plan_id):
     if result is None:
         raise PlanNotFound(plan_id)
     revision_id, payload = result
+    body = json.loads(payload)
+    if isinstance(body, dict) and body.get('version') == REVIEW_PLAN_VERSION:
+        return decode_review_plan(plan_id, revision_id, payload)
     return decode_plan(plan_id, revision_id, payload)

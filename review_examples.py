@@ -5,7 +5,9 @@ from contextlib import closing
 from fractions import Fraction
 
 from analysis.request import publish_report
+from analysis.review_request import publish_review_report
 from plans.freeze import freeze_plan
+from plans.freeze_review import freeze_review_plan
 from reports.history import read_report
 from reports.storage import open_archive
 from source.corrections import amend
@@ -70,10 +72,65 @@ def compare_v1(case, expected_retention):
         }
 
 
+def compare_v2(case):
+    """Freeze labeled V2 plans and sign the exact review completion ratios."""
+    with closing(open_archive(":memory:")) as archive:
+        with closing(open_source(":memory:")) as source:
+            original = receive(
+                source, case["batch"] + "-v2", [Station(*row) for row in case["stations"]],
+                case["release"], case["reject"],
+                [TransferCount(*row) for row in case["counts"]], labels=case["labels"],
+            )
+            original_plan = freeze_review_plan(source, archive, original)
+            swapped = amend(
+                source, original,
+                [TransferCount(*row) for row in case["replacements"]],
+            )
+            swapped_plan = freeze_review_plan(source, archive, swapped)
+            label_revision = amend(
+                source, original, [], labels=case.get("label_only_patch", {})
+            )
+            label_plan = freeze_review_plan(source, archive, label_revision)
+
+        def pair(plan):
+            report = publish_review_report(archive, plan.plan_id, "A", ("A", "B"))
+            assert read_report(archive, report.report_id) == report
+            return [
+                str(report.handoff_release_probability),
+                None if report.review_completion_given_handoff_release is None
+                else str(report.review_completion_given_handoff_release),
+            ]
+
+        erased = None
+        if case is RESET_ON_RETURN:
+            erased_report = publish_review_report(
+                archive, original_plan.plan_id, "B", ("B", "C")
+            )
+            erased = [
+                str(erased_report.handoff_release_probability),
+                erased_report.review_completion_given_handoff_release,
+            ]
+        return {
+            "batch": case["batch"],
+            "review_rows_balance": all(
+                sum(original_plan.row_for(station, phase).values()) == 1
+                for station in original_plan.stations for phase in (0, 1, 2)
+            ),
+            "v2_original_ab": pair(original_plan),
+            "v2_swapped_ab": pair(swapped_plan),
+            "v2_label_patch_ab": pair(label_plan),
+            "v2_erased_handoff": erased,
+        }
+
+
 def main():
     print(json.dumps([
         compare_v1(RESET_ON_RETURN, Fraction(1)),
         compare_v1(PAIRED_EXIT, Fraction(1, 2)),
+    ], ensure_ascii=False))
+    print(json.dumps([
+        compare_v2(RESET_ON_RETURN),
+        compare_v2(PAIRED_EXIT),
     ], ensure_ascii=False))
 
 

@@ -2,7 +2,7 @@
 
 from source.revisions import insert_revision, load_revision
 from source.storage import revision_transaction
-from source.validation import InvalidCounts, validate_counts
+from source.validation import InvalidCounts, merge_labels, validate_counts, validate_labels
 
 
 def apply_count_replacements(parent, replacements):
@@ -21,11 +21,13 @@ def apply_count_replacements(parent, replacements):
     return tuple(merged)
 
 
-def amend(connection, parent_id, replacements):
+def amend(connection, parent_id, replacements, labels=None):
     with revision_transaction(connection):
         parent = load_revision(connection, parent_id)
         counts = apply_count_replacements(parent, replacements)
+        patch = validate_labels(parent.stations, labels, allow_clear=True)
+        label_map = merge_labels(parent.labels, patch)
         return insert_revision(
             connection, parent.batch, parent.revision_id, parent.stations,
-            parent.release, parent.reject, counts,
+            parent.release, parent.reject, counts, label_map,
         )

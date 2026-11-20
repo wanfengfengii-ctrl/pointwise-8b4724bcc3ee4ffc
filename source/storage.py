@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS transfer_counts (
     PRIMARY KEY (revision_id, ordinal),
     FOREIGN KEY (revision_id, origin) REFERENCES stations(revision_id, name)
 );
+CREATE TABLE IF NOT EXISTS station_labels (
+    revision_id INTEGER NOT NULL,
+    station_name TEXT NOT NULL,
+    label TEXT NOT NULL CHECK (label IN ('recheck', 'witness', 'reset')),
+    PRIMARY KEY (revision_id, station_name),
+    FOREIGN KEY (revision_id, station_name)
+        REFERENCES stations(revision_id, name)
+);
 """
 
 
@@ -44,6 +52,23 @@ def initialize_source(connection):
         raise sqlite3.ProgrammingError('initialize_source requires an idle connection')
     connection.execute('PRAGMA foreign_keys = ON')
     connection.executescript(_SCHEMA)
+    # Databases created before V2 lack the label table. The composite foreign
+    # key needs the UNIQUE (revision_id, name) constraint from the current
+    # schema, which CREATE IF NOT EXISTS guarantees for fresh tables.
+    existing = {
+        row[0] for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        )
+    }
+    if 'station_labels' not in existing:
+        connection.execute(
+            'CREATE TABLE station_labels ('
+            'revision_id INTEGER NOT NULL, station_name TEXT NOT NULL, '
+            "label TEXT NOT NULL CHECK (label IN ('recheck', 'witness', 'reset')), "
+            'PRIMARY KEY (revision_id, station_name), '
+            'FOREIGN KEY (revision_id, station_name) '
+            'REFERENCES stations(revision_id, name))'
+        )
 
 
 def open_source(path):

@@ -29,13 +29,14 @@ class Revision:
     release: str
     reject: str
     counts: tuple[TransferCount, ...]
+    labels: dict
 
 
 class RevisionNotFound(LookupError):
     pass
 
 
-def insert_revision(connection, batch, parent_id, stations, release, reject, counts):
+def insert_revision(connection, batch, parent_id, stations, release, reject, counts, labels=None):
     """Insert a validated snapshot inside the caller's revision transaction."""
     cursor = connection.execute(
         'INSERT INTO revisions(batch, parent_id) VALUES (?, ?)', (batch, parent_id)
@@ -56,6 +57,11 @@ def insert_revision(connection, batch, parent_id, stations, release, reject, cou
         ((revision_id, pos, row.origin, row.destination, format(row.count, 'x'))
          for pos, row in enumerate(counts)),
     )
+    if labels:
+        connection.executemany(
+            'INSERT INTO station_labels VALUES (?, ?, ?)',
+            ((revision_id, name, kind) for name, kind in sorted(labels.items())),
+        )
     return revision_id
 
 
@@ -87,6 +93,10 @@ def load_revision(connection, revision_id):
             'WHERE revision_id = ? ORDER BY ordinal', key
         )
     )
+    labels = dict(connection.execute(
+        'SELECT station_name, label FROM station_labels WHERE revision_id = ?', key
+    ))
     return Revision(
-        revision_id, batch, parent_id, stations, terminals['release'], terminals['reject'], counts
+        revision_id, batch, parent_id, stations, terminals['release'],
+        terminals['reject'], counts, labels,
     )

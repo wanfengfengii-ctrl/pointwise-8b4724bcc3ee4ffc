@@ -51,6 +51,9 @@ with closing(open_archive('review.sqlite3')) as archive:
 - `plans.freeze.freeze_plan(source, archive, revision_id)` 返回 `FixedPlan`。`plans.catalog.load_plan(archive, plan_id)` 重开后可按号取得同一计划，未知计划抛 `PlanNotFound`。不可读的修订、核账或计划写入失败抛 `FreezeError`，无新计划。
 - `walks.replay.replay_walk(archive, plan_id, start, outcomes)` 接收起站之后的逐步结果，公开站为字符串，终结结果为 `PlanOutcome` 枚举。`WalkResult` 提供 `actual`、`retained`、`erasures`、`retained_handoffs` 和 `terminal`。非法起站、零概率步骤、终局后有步骤或步序缺终局抛 `InvalidWalk`，未知计划抛 `PlanNotFound`。
 - `analysis.request.publish_report(archive, plan_id, start, handoff, *, before_commit=None)` 返回 `FormalReport`，其中有 `receipt`、`report_id` 和 `plan_id`。起站和一对有向交接端点必须是该计划的公开站，合法端点之间的零概率交接仍可查询。未知计划抛 `PlanNotFound`，非法起站或交接抛 `InvalidReviewRequest`。提交前接点接收待提交的 `Receipt`，供调用方观察或以异常终止提交。接点在事务中执行，只读视察或抛出异常均可，事务控制由签发负责。签发异常抛 `PublishError`，没有成功回执。
+- `source.intake.receive` 和 `source.corrections.amend` 另接可选 `labels=None` 关键字，登记公开或私有站的 `recheck`、`witness`、`reset` 标签；勘误用确切替换、`None` 清除。`source.revisions.load_revision` 返回的修订以 `labels` 字典提供该版标签。
+- `plans.freeze.freeze_review_plan(source, archive, revision_id)` 发行 V2 两级复核 `ReviewPlan`，与 V1 共用计划编号空间。`ReviewPlan.row_for(station, phase)` 返回 `(outcome, next_phase)` 到精确 `Fraction` 的联合概率映射，终局键带终局阶段，滞留单列 `(PlanOutcome.NEVER, None)`。`plans.catalog.load_plan` 按载荷版本恢复 V1 或 V2 计划。
+- `analysis.review_request.publish_review_report(archive, plan_id, start, handoff, *, before_commit=None)` 只接受 V2 计划，返回 `FormalReviewReport`，字段含 `report_id`、`receipt`、`plan_id`、`revision_id`、`start`、有序元组 `handoff`、`handoff_release_probability` 与 `review_completion_given_handoff_release`。空子群给 `None`，有子群无人完成给精确 `Fraction(0)`。V1 计划传入 V2 签发或 V2 计划传入 `publish_report`、`replay_walk` 均按错版拒绝。
 - `reports.history.read_report(archive, report_id)` 从已提交正文恢复原报告及回执，未知号抛 `ReportNotFound`。`reports.handover.handover(archive, plan_id)` 返回按正式签发先后排列的 `HandoverEntry(report_id, start)` 列表。已知空计划返回空列表，未知计划抛 `PlanNotFound`。
 
 ## 核账口径

@@ -11,6 +11,10 @@ class InvalidWalk(ValueError):
 
 class WalkSession:
     def __init__(self, plan, start):
+        from plans.review_snapshot import ReviewPlan
+
+        if isinstance(plan, ReviewPlan):
+            raise InvalidWalk('walks replay V1 fixed plans, not V2 review plans')
         if type(start) is not str or start not in plan.stations:
             raise InvalidWalk('start is not a public station on this plan')
         self._plan = plan

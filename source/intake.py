@@ -2,15 +2,16 @@
 
 from source.revisions import insert_revision
 from source.storage import revision_transaction
-from source.validation import validate_batch
+from source.validation import validate_batch, validate_labels
 
 
 class BatchConflict(ValueError):
     pass
 
 
-def receive(connection, batch, stations, release, reject, counts):
+def receive(connection, batch, stations, release, reject, counts, labels=None):
     stations, counts = validate_batch(batch, stations, release, reject, counts)
+    label_map = validate_labels(stations, labels, allow_clear=False)
     with revision_transaction(connection):
         existing = connection.execute(
             'SELECT revision_id FROM revisions WHERE batch = ? AND parent_id IS NULL',
@@ -18,4 +19,6 @@ def receive(connection, batch, stations, release, reject, counts):
         ).fetchone()
         if existing is not None:
             raise BatchConflict(batch)
-        return insert_revision(connection, batch, None, stations, release, reject, counts)
+        return insert_revision(
+            connection, batch, None, stations, release, reject, counts, label_map
+        )

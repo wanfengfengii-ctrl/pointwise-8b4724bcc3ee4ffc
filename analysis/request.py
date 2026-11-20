@@ -37,6 +37,8 @@ def validate_review_request(plan: FixedPlan, request: ReviewRequest):
 
 def publish_report(archive, plan_id, start, handoff, *, before_commit=None) -> FormalReport:
     plan = load_plan(archive, plan_id)
+    if not isinstance(plan, FixedPlan):
+        raise InvalidReviewRequest(f'plan {plan_id} is not a V1 fixed plan')
     request = validate_review_request(plan, ReviewRequest(plan_id, start, handoff))
     release = release_probability(plan, request.start)
     joint = joint_release_probability(plan, request.start, request.handoff)
